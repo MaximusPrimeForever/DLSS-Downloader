@@ -2,16 +2,21 @@
 
 import os
 import sys
-import json
+import zipfile
 import argparse
-import urllib.request as url_request
+from pathlib import Path
+
+from utils import DLSS_FILENAME, find_file_in_directory, DLSS_BACKUP_FILENAME
+from utils import parse_dlss_records, download_dlss_file, unzip_dlss_file_contents
+from utils import get_dlss_versions_list_str, get_specific_dlss_version
+
 
 parser = argparse.ArgumentParser(description="Download and swap DLSS dlls.")
 
 parser.add_argument(
-    "-s",
-    "--swap",
-    help="Download DLSS dll and swap dll in the given path.",
+    "-g",
+    "--game_path",
+    help="The path to the game's directory.",
     type=str
 )
 parser.add_argument(
@@ -29,32 +34,22 @@ parser.add_argument(
 parser.add_argument(
     "-r",
     "--restore",
-    help="Restore given dll to original (backed up) file.",
-    type=str
+    help="Restore a backed up dlss dll file in the given game path.",
+    action="store_true"
+)
+parser.add_argument(
+    "-s",
+    "--swap",
+    help="Download DLSS dll and swap dll in the given game path."
+         "Downloads the latest version by default.",
+    action="store_true"
 )
 
-DLSS_RECORDS_URL = r"https://raw.githubusercontent.com/beeradmoore/dlss-archive/main/dlss_records.json"
 
-
-def parse_dlss_records():
-    json_data = None
-    with url_request.urlopen(DLSS_RECORDS_URL) as url:
-        json_data = json.loads(url.read().decode())
-
-    return json_data
-
-
-def download_dlss_file(raw_url: str):
-    data = None
-    with url_request.urlopen(raw_url) as url:
-        data = url.read()
-
-    return data
-
-
-def swap_dlss(swap_path: str = None,
+def swap_dlss(game_dir_path: str = None,
               download_version: str = None,
               should_list_versions: bool = False,
+              should_swap: bool = False,
               should_restore: bool = False):
     json_data = parse_dlss_records()
     if json_data is None:
@@ -64,59 +59,104 @@ def swap_dlss(swap_path: str = None,
     versions = json_data['stable']
 
     if should_list_versions:
-        out = f"Available DLSS versions:{os.linesep}"
-        for dlss_version in versions:
-            current_version = dlss_version["version"]
-            current_md5 = dlss_version["md5_hash"]
-            out += f"\t{current_version} : {current_md5}{os.linesep}"
-
-        print(out)
+        print(get_dlss_versions_list_str(versions))
         sys.exit()
 
-    selected_version = ""
+    if should_restore:
+        dlss_file_path = find_file_in_directory(game_dir_path, DLSS_BACKUP_FILENAME)
+        if dlss_file_path is None:
+            sys.exit("Could not find dlss backup file.")
+
+        print("Restoring...", end=' ')
+        with open(dlss_file_path, 'rb') as dlss_backup:
+            dlss_backup_contents = dlss_backup.read()
+            with open(Path(dlss_file_path.parent, DLSS_FILENAME), 'wb') as f:
+                f.write(dlss_backup_contents)
+
+        print("done.")
+        sys.exit()
+
+    selected_version = None
     if download_version:
-        # if a specific DLSS version was specified, look for it
-        for dlss_version in versions:
-            if dlss_version["version"] == download_version:
-                selected_version = dlss_version
-                break
-
-        if not selected_version:
+        selected_version = get_specific_dlss_version(versions, download_version)
+        if selected_version is None:
             # if not found, quit
-            sys.exit(f"Could not find given DLSS version: {download_version}. Use -lv to list versions.")
+            sys.exit(
+                f"Could not find given DLSS version: {download_version}."
+                "Use -lv to list versions."
+            )
 
-        selected_version_str = selected_version["version"]
-        print(f"Found {selected_version_str} version")
+        version_str = selected_version["version"]
+        print(f"Found {version_str} version")
     else:
         # otherwise, use the latest one
         selected_version = versions[-1]
 
+    # build string with dlss version number
+    dlss_file_name = Path(
+        Path(selected_version["download_url"]).name.replace(".zip", ".dll")
+    )
+
     # set the dlss file path
-    dlss_file_path = "nvngx_dlss.zip"
-    if swap_path and os.path.isfile(swap_path):
-        dlss_file_path = swap_path
-        # TODO: check if swap_path.name is nvngx_dlss.dll
+    dlss_file_path = dlss_file_name
+    if should_swap:
+        # locate dlss file in game folder
+        dlss_file_path = find_file_in_directory(game_dir_path, DLSS_FILENAME)
+        if dlss_file_path is None:
+            sys.exit("dlss .dll file was not found at given game directory.")
+
+        # TODO: check DLSS version of game - warn if replacing with older version
+        # TODO: add flag to disable warnings
 
     selected_version_str = selected_version["version"]
-    print(f"Downloading {selected_version_str} version... ", end='')
+    print(f"Downloading {selected_version_str} version...")
 
-    dlss_file_contents = download_dlss_file(selected_version["download_url"])
+    # download the dlss zip file
+    dlss_file_contents = download_dlss_file(
+        selected_version["download_url"],
+        use_progress_bar=True
+    )
     if dlss_file_contents is None:
         sys.exit("Failed to download DLSS file.")
 
-    print("done")
-    # TODO: unzip
+    # unzip
+    print("Unzipping...", end=' ')
+    dlss_dll_bytes = None
 
+    # try to unzip
+    try:
+        dlss_dll_bytes = unzip_dlss_file_contents(dlss_file_contents)
+    except KeyError:
+        sys.exit("Could not find nvngx_dlss.dll in zip.")
+    except zipfile.BadZipFile:
+        sys.exit("Downloaded file was not a zip.")
+
+    # quit if unzipping still somehow failed
+    if dlss_dll_bytes is None:
+        sys.exit("Failed to unzip dlss file.")
+
+    # backup old dlss file
+    with open(dlss_file_path, 'rb') as old_f:
+        old_dlss_contents = old_f.read()
+
+        backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
+        with open(backup_file_path, 'wb') as new_f:
+            new_f.write(old_dlss_contents)
+
+    # write dlss dll contents
     with open(dlss_file_path, 'wb') as f:
-        f.write(dlss_file_contents)
+        f.write(dlss_dll_bytes)
+
+    print("done.")
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
 
     swap_dlss(
-        args.swap,
+        args.game_path,
         args.version,
         args.list_versions,
+        args.swap,
         args.restore
     )
