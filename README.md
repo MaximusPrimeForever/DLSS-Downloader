@@ -65,7 +65,8 @@ Unzipping... done.
 ```
 
 ### Restore original DLSS version from backed up version
-Restore original DLSS from back up.
+Restore original DLSS from back up (`nvngx_dlss.dll.backup`).  
+Only works if a backup was created by the script earlier.
 ```powershell
 ❯ python .\swap_dlss.py -g "Path\to\game\directory" -r 
 Restoring... done.
