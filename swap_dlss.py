@@ -99,14 +99,6 @@ def swap_dlss(game_dir_path: str = None,
 
     # set the dlss file path
     dlss_file_path = dlss_file_name
-    if should_swap:
-        # locate dlss file in game folder
-        dlss_file_path = find_file_in_directory(game_dir_path, DLSS_FILENAME)
-        if dlss_file_path is None:
-            sys.exit("dlss .dll file was not found at given game directory.")
-
-        # TODO: check DLSS version of game - warn if replacing with older version
-        # TODO: add flag to disable warnings
 
     selected_version_str = selected_version["version"]
     print(f"Downloading {selected_version_str} version...")
@@ -135,13 +127,22 @@ def swap_dlss(game_dir_path: str = None,
     if dlss_dll_bytes is None:
         sys.exit("Failed to unzip dlss file.")
 
-    # backup old dlss file
-    with open(dlss_file_path, 'rb') as old_f:
-        old_dlss_contents = old_f.read()
+    if should_swap:
+        # locate dlss file in game folder
+        dlss_file_path = find_file_in_directory(game_dir_path, DLSS_FILENAME)
+        if dlss_file_path is None:
+            sys.exit("dlss .dll file was not found at given game directory.")
 
-        backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
-        with open(backup_file_path, 'wb') as new_f:
-            new_f.write(old_dlss_contents)
+        # TODO: check DLSS version of game - warn if replacing with older version
+        # TODO: add flag to disable warnings
+
+        # backup old dlss file
+        with open(dlss_file_path, 'rb') as old_f:
+            old_dlss_contents = old_f.read()
+
+            backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
+            with open(backup_file_path, 'wb') as new_f:
+                new_f.write(old_dlss_contents)
 
     # write dlss dll contents
     with open(dlss_file_path, 'wb') as f:
