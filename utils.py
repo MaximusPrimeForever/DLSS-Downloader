@@ -8,10 +8,19 @@ from pathlib import Path
 from typing import Union
 import urllib.request as url_request
 
+from win32api import GetFileVersionInfo, LOWORD, HIWORD  # type: ignore
+
 
 DLSS_RECORDS_URL = r"https://raw.githubusercontent.com/beeradmoore/dlss-archive/main/dlss_records.json"
 DLSS_FILENAME = "nvngx_dlss.dll"
 DLSS_BACKUP_FILENAME = DLSS_FILENAME + ".backup"
+
+
+def get_dll_version_number(filename: Union[Path, str]) -> str:
+    info = GetFileVersionInfo(str(filename), "\\")
+    ms = info['FileVersionMS']
+    ls = info['FileVersionLS']
+    return f"{HIWORD(ms)}.{LOWORD(ms)}.{HIWORD(ls)}.{LOWORD(ls)}"
 
 
 def find_file_in_directory(dir_path: Union[str, Path], file_name: str) -> Union[Path, None]:
@@ -61,7 +70,7 @@ def download_dlss_file(raw_url: str, use_progress_bar=False):
     return data
 
 
-def unzip_dlss_file_contents(zip_bytes: bytes) -> Union[bytes, None]:
+def extract_dlss_dll_from_zip(zip_bytes: bytes) -> Union[bytes, None]:
     """Receives bytes object of dlss zip file, and returns bytes of dll file.
 
     None if failed.
@@ -70,7 +79,7 @@ def unzip_dlss_file_contents(zip_bytes: bytes) -> Union[bytes, None]:
     zip_filelike = io.BytesIO(zip_bytes)
 
     # try to unzip
-    with zipfile.ZipFile(zip_filelike).open("nvngx_dlss.dll") as dlss_zip:
+    with zipfile.ZipFile(zip_filelike).open(DLSS_FILENAME) as dlss_zip:
         dlss_dll_bytes = dlss_zip.read()
 
     # quit if unzipping still somehow failed

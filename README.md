@@ -12,7 +12,7 @@ pip install tqdm
 ## Usage
 ### List existing DLSS versions:
 ```powershell
-❯ python swap_dlss.py -lv
+❯ python dlss_mng.py -lv
 
 Available DLSS versions:
         1.0.0.0 : 65D2E2A86352D77244A73BEDD5837F50 
@@ -32,7 +32,7 @@ Available DLSS versions:
 ```powershell
 ❯ ls
 
-❯ python swap_dlss.py -v 2.3.4.0
+❯ python dlss_mng.py -v 2.3.4.0
 Found 2.3.4.0 version
 Downloading 2.3.4.0 version...
 100%|███████████████████████████████████████████████| 2403/2403 [00:03<00:00, 663.44it/s]
@@ -51,13 +51,13 @@ This backs up the existing dlss .dll file (saved as `nvngx_dlss.dll.backup`).
 A DLSS version can be specified with the `-v` flag.
 
 ```powershell
-❯ python swap_dlss.py -g "Path\to\game\directory"
+❯ python dlss_mng.py -g "Path\to\game\directory"
 Found 2.3.4.0 version
 Downloading 2.3.4.0 version...
 100%|███████████████████████████████████████████████| 2403/2403 [00:03<00:00, 663.44it/s]
 Unzipping... done.
 
-❯ python swap_dlss.py -g "Path\to\game\directory" -v 1.0.13.0
+❯ python dlss_mng.py -g "Path\to\game\directory" -v 1.0.13.0
 Found 1.0.13.0 version
 Downloading 1.0.13.0 version...
 100%|███████████████████████████████████████████████| 2403/2403 [00:03<00:00, 663.44it/s]
@@ -68,6 +68,6 @@ Unzipping... done.
 Restore original DLSS from back up (`nvngx_dlss.dll.backup`).  
 Only works if a backup was created by the script earlier.
 ```powershell
-❯ python .\swap_dlss.py -g "Path\to\game\directory" -r 
+❯ python .\dlss_mng.py -g "Path\to\game\directory" -r 
 Restoring... done.
 ```
