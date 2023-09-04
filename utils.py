@@ -2,6 +2,7 @@
 
 import os
 import io
+import sys
 import json
 import zipfile
 from pathlib import Path
@@ -107,3 +108,23 @@ def get_specific_dlss_version(dlss_records: dict, version_or_hash: str):
             return dlss_version
 
     return None
+
+def get_game_info(game_path: Path):
+    """Return formatted string which describes the game and its DLSS version."""
+    dlss_file_path = find_file_in_directory(
+        game_path,
+        DLSS_FILENAME
+    )
+    if dlss_file_path is None:
+        sys.exit(f"DLSS .dll file was not found at {game_path}.")
+    
+    dlss_backup_file_path = find_file_in_directory(
+        game_path,
+        DLSS_BACKUP_FILENAME
+    )
+    backup_version_number = None
+    if dlss_backup_file_path is not None:
+        backup_version_number = get_dll_version_number(dlss_backup_file_path)
+
+    version_number = get_dll_version_number(dlss_file_path)
+    return game_path.name, version_number, backup_version_number

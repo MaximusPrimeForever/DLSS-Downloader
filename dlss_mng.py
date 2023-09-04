@@ -1,14 +1,13 @@
 """Fetch DLSS versions from the OG DLSS-Swapper site."""
 import os
 import sys
-from typing import Optional
 import zipfile
 import argparse
 from pathlib import Path
 
 from utils import DLSS_FILENAME, find_file_in_directory, DLSS_BACKUP_FILENAME
 from utils import parse_dlss_records, download_dlss_file, extract_dlss_dll_from_zip
-from utils import get_dlss_versions_list_str, get_specific_dlss_version, get_dll_version_number
+from utils import get_dlss_versions_list_str, get_specific_dlss_version, get_game_info
 
 DLSS_VERSION_LATEST="latest"
 
@@ -53,13 +52,14 @@ parser.add_argument(
     action="store_true"
 )
 
-#TODO: make sure when calling the script with -g and no other flag does nothing
+
 def swap_dlss(should_list_versions: bool,
               game_dir_path: Path,
               download_version: str,
               swap_version: str,
               should_print_game_info: bool = False,
               should_restore: bool = False):
+    """Main function to handle DLSS IO operations."""
     json_data = parse_dlss_records()
     if json_data is None:
         sys.exit("Failed to parse DLSS records url.")
@@ -76,15 +76,16 @@ def swap_dlss(should_list_versions: bool,
         print("Game path must be provided!")
         sys.exit()
 
+    # get game's info
     game_dir_path = Path(game_dir_path)
+    game_name, current_dlss_version, backup_dlss_version = get_game_info(game_dir_path)
+
     # print game's DLSS info and quit
     if should_print_game_info:
-        dlss_file_path = find_file_in_directory(game_dir_path, DLSS_FILENAME)
-        if dlss_file_path is None:
-            sys.exit(f"DLSS .dll file was not found at {game_dir_path}.")
+        if backup_dlss_version is not None:
+            print(f"{game_name} has a backup DLSS {backup_dlss_version}")
 
-        version_number = get_dll_version_number(dlss_file_path)
-        print(f"{game_dir_path.name} uses DLSS {version_number}.")
+        print(f"{game_name} uses DLSS {current_dlss_version}")
         sys.exit()
 
     # restore the game's original DLSS.dll
@@ -183,10 +184,7 @@ def swap_dlss(should_list_versions: bool,
         if dlss_file_path is None:
             sys.exit("dlss .dll file was not found at given game directory.")
 
-        # TODO: check DLSS version of game - warn if replacing with older version
-        # TODO: add flag to disable warnings
-
-        # backup old dlss file
+        # backup old dlss file if there is no backup
         backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
         if not backup_file_path.exists():
             with open(dlss_file_path, 'rb') as old_f:
@@ -200,6 +198,10 @@ def swap_dlss(should_list_versions: bool,
             f.write(dlss_dll_bytes)
 
     print("done.")
+    _, new_dlss_version, backup_dlss_version = get_game_info(game_dir_path)
+    print(f"{game_name} has DLSS {backup_dlss_version} backed up.")
+    print(f"{game_name} was using DLSS {current_dlss_version}")
+    print(f"{game_name} now uses DLSS {new_dlss_version}")
 
 
 if __name__ == '__main__':
