@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Union
 import urllib.request as url_request
 
+from prettytable import PrettyTable
+
 from win32api import GetFileVersionInfo, LOWORD, HIWORD  # type: ignore
 
 
@@ -88,14 +90,14 @@ def extract_dlss_dll_from_zip(zip_bytes: bytes) -> Union[bytes, None]:
 
 
 def get_dlss_versions_list_str(dlss_records: dict):
-    out = f"Available DLSS versions:{os.linesep}"
+    table = PrettyTable(["Version", "MD5 Hash"])
 
     for dlss_version in dlss_records:
         current_version = dlss_version["version"]
         current_md5 = dlss_version["md5_hash"]
-        out += f"\t{current_version} : {current_md5}{os.linesep}"
+        table.add_row([current_version, current_md5])
 
-    return out
+    return str(table)
 
 
 def get_specific_dlss_version(dlss_records: dict, version_or_hash: str):
