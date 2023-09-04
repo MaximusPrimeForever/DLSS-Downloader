@@ -97,11 +97,13 @@ def get_dlss_versions_list_str(dlss_records: dict):
     return out
 
 
-def get_specific_dlss_version(dlss_records: dict, version: str):
-    selected_version = None
+def get_specific_dlss_version(dlss_records: dict, version_or_hash: str):
     for dlss_version in dlss_records:
-        if dlss_version["version"] == version:
-            selected_version = dlss_version
-            break
+        if dlss_version["version"] == version_or_hash:
+            return dlss_version
+    
+    for dlss_version in dlss_records:
+        if dlss_version["md5_hash"] == version_or_hash:
+            return dlss_version
 
-    return selected_version
+    return None

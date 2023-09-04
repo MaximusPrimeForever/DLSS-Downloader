@@ -117,11 +117,11 @@ def swap_dlss(should_list_versions: bool,
     if version_to_download == DLSS_VERSION_LATEST:
         selected_version = versions[-1]
     else:
-        selected_version = get_specific_dlss_version(versions, download_version)
+        selected_version = get_specific_dlss_version(versions, version_to_download)
         if selected_version is None:
             # if not found, quit
             sys.exit(
-                f"Could not find given DLSS version: {download_version}. "
+                f"Could not find given DLSS version: {version_to_download}. "
                 "Use -lv to list versions."
             )
 
