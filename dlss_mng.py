@@ -187,12 +187,13 @@ def swap_dlss(should_list_versions: bool,
         # TODO: add flag to disable warnings
 
         # backup old dlss file
-        with open(dlss_file_path, 'rb') as old_f:
-            old_dlss_contents = old_f.read()
+        backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
+        if not backup_file_path.exists():
+            with open(dlss_file_path, 'rb') as old_f:
+                old_dlss_contents = old_f.read()
 
-            backup_file_path = Path(dlss_file_path.parent, DLSS_BACKUP_FILENAME)
-            with open(backup_file_path, 'wb') as new_f:
-                new_f.write(old_dlss_contents)
+                with open(backup_file_path, 'wb') as new_f:
+                    new_f.write(old_dlss_contents)
 
         # write dlss dll contents
         with open(dlss_file_path, 'wb') as f:
