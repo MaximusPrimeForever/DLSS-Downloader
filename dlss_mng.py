@@ -29,7 +29,8 @@ parser.add_argument(
 parser.add_argument(
     "-d",
     "--download",
-    help="Download a specific DLSS version to the working directory.",
+    help="Download a specific DLSS version to the working directory."
+         "If a game path using -g is given, then DLSS is downloaded to that path.",
     type=str,
 )
 parser.add_argument(
@@ -145,18 +146,29 @@ def swap_dlss(should_list_versions: bool,
         should_swap = True
 
     if should_download:
+        if os.path.exists(game_dir_path):
+            download_path = game_dir_path
+        else:
+            if game_dir_path:
+                print("Provided game path does not exist. Downloading to current working directory..")
+
+            download_path = os.getcwd()
+
         metadata, raw_data = download_dlss(dlss_records, version_to_download)
-        cwd = os.getcwd()
         version = metadata["version"]
 
-        print(f"Writing DLSS {version} to {cwd}")
-        with open(Path(cwd, DLSS_FILENAME), 'wb') as f:
+        print(f"Writing DLSS {version} to {download_path}")
+        with open(Path(download_path, DLSS_FILENAME), 'wb') as f:
             f.write(raw_data)
 
         sys.exit(0)
 
     if not game_dir_path:
         print("Game path must be provided!")
+        sys.exit()
+
+    if not os.path.exists(game_dir_path):
+        print("Provided game path does not exist! Check if it's correct.")
         sys.exit()
 
     # get game's info
